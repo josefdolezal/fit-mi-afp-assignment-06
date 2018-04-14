@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module CLI (loadAndShow, testerCLI) where
 
 import System.IO
@@ -23,9 +25,29 @@ loadAndShow = do
     Nothing -> print "Invalid JSON..."
     _       -> print contents
 
+data CLITester = CompleteTest { src :: Text, shuffle :: Bool }
+               | Learn        { src :: Text, shuffle :: Bool }
+               | Train        { src :: Text, shuffle :: Bool }
+
+shuffleQuestionsSwitch :: Parser Bool
+shuffleQuestionsSwitch = switch "shuffle" 's' "Shuffles input questions"
+
+inputFileArgument :: Parser Text
+inputFileArgument = argText "test" "JSON file containing test data"
+
+testerCommand :: Parser (Text, Bool)
+testerCommand = (,) <$> inputFileArgument
+                    <*> shuffleQuestionsSwitch
+
+cli :: Parser CLITester
+cli =   fmap (uncurry CompleteTest) testerCommand
+    <|> fmap (uncurry Learn) (subcommand "learn" "Prints preview of the test" testerCommand)
+    <|> fmap (uncurry Train) (subcommand "train" "Interactive testing" testerCommand)
 
 testerCLI :: IO ()
-testerCLI = print "Welcome to SELF-TESTER"
+testerCLI = do
+  command <- options "JSON-driven exam self-tester" cli
+  run command
   -- TODO: make CLI for answering loaded Test
   --       stack exec selftester JSON_FILE [cmd]
   --       - in args there will be one .json file with test, load the TestSet
@@ -42,3 +64,8 @@ testerCLI = print "Welcome to SELF-TESTER"
   --       If you want to try cmdargs or other, feel free to do it! (you can have nice --version and --help)
 
 -- TODO: try to deal here just with IO, dealing with "pure" Strings should be in different modules
+
+run :: CLITester -> IO ()
+run (CompleteTest src shuffle) = undefined
+run (Learn src shuffle)        = undefined
+run (Train src shuffle)        = undefined
