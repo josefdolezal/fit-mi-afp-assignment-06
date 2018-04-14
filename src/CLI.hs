@@ -6,6 +6,8 @@ import qualified Data.ByteString.Lazy as BS
 import Data.Aeson (decode)
 import Data.Maybe
 
+import Turtle
+
 import Tester.Model
 import Tester.Model.AesonInstances
 

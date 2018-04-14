@@ -24,7 +24,7 @@ dependencies:
 - aeson
 - bytestring
 - text
-- cmdargs
+- turtle
 
 library:
   source-dirs: src
