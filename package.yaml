@@ -24,6 +24,7 @@ dependencies:
 - aeson
 - bytestring
 - text
+- cmdargs
 
 library:
   source-dirs: src
