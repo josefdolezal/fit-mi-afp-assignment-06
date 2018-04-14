@@ -40,9 +40,9 @@ testerCommand = (,) <$> inputFileArgument
                     <*> shuffleQuestionsSwitch
 
 cli :: Parser CLITester
-cli =   fmap (uncurry CompleteTest) testerCommand
-    <|> fmap (uncurry Learn) (subcommand "learn" "Prints preview of the test" testerCommand)
+cli =   fmap (uncurry Learn) (subcommand "learn" "Prints preview of the test" testerCommand)
     <|> fmap (uncurry Train) (subcommand "train" "Interactive testing" testerCommand)
+    <|> fmap (uncurry CompleteTest) testerCommand
 
 testerCLI :: IO ()
 testerCLI = do
