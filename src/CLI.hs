@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module CLI (loadAndShow, testerCLI) where
+module CLI (testerCLI) where
 
 import System.IO
 import System.Environment
@@ -13,17 +13,11 @@ import Turtle
 import Tester.Model
 import Tester.Model.AesonInstances
 
-
--- demonstration of using aeson to load JSON file with TestSet
-loadAndShow :: IO ()
-loadAndShow = do
-  args <- getArgs
-  handle <- openFile (head args) ReadMode
-  contentsJSON <- BS.hGetContents handle
-  let contents = decode contentsJSON :: Maybe TestSet
-  case contents of
-    Nothing -> print "Invalid JSON..."
-    _       -> print contents
+loadTestData :: String -> IO (Maybe String)
+loadTestData src = do
+    handle  <- openFile src ReadMode
+    content <- BS.hGetContents handle
+    return (decode content)
 
 data CLITester = CompleteTest { src :: Text, shuffle :: Bool }
                | Learn        { src :: Text, shuffle :: Bool }
@@ -66,6 +60,4 @@ testerCLI = do
 -- TODO: try to deal here just with IO, dealing with "pure" Strings should be in different modules
 
 run :: CLITester -> IO ()
-run (CompleteTest src shuffle) = undefined
-run (Learn src shuffle)        = undefined
-run (Train src shuffle)        = undefined
+run = putStrLn . show . src
