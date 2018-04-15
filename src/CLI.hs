@@ -7,12 +7,15 @@ import System.Environment
 import Control.Exception
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as L
+import Data.List
 import Data.Aeson (decode)
 import Data.Maybe
 
 import Turtle
 
 import Tester.Model
+import Tester.Answering
 import Tester.Model.AesonInstances
 
 data CLITester = CompleteTest { src :: T.Text, shuffle :: Bool }
@@ -66,14 +69,23 @@ run t@(Learn _ _)        = processInputs t >>= runLearn
 run t@(Train _ _)        = processInputs t >>= runTrain
 
 runCompleteTest :: TestSet -> IO ()
-runCompleteTest t = undefined
+runCompleteTest t = do
+    printHeader t
+    putStrLn "Questions:\n"
+    let questions       = map questionPreview $ tsItems t
+    let taggedQuestions = zipWith (\i q -> show i ++ ") " ++ q) [1..] questions
+    let answers         = map (correctAnswerPreview . quAnswer) $ tsItems t
+    let previews        = zipWith (\q a -> q ++ a ++ "\n") taggedQuestions answers
+    putStr $ intercalate (questionSeparator ++ "\n") previews
 
 
 runLearn :: TestSet -> IO ()
-runLearn = undefined
+runLearn t = do
+    printHeader t
 
 runTrain :: TestSet -> IO ()
-runTrain = undefined
+runTrain t = do
+    printHeader t
 
 loadTestData :: String -> IO TestSet
 loadTestData src = do
@@ -92,3 +104,9 @@ permuteQuestions :: Bool -> TestSet -> TestSet
 permuteQuestions True t  = t { tsItems = shuffledItems } 
     where shuffledItems = tsItems t
 permuteQuestions False t = t
+
+printHeader :: TestSet -> IO ()
+printHeader t = do
+    putStrLn $ "[Test Preview] " ++ (L.unpack . tsName $ t)
+    let intro = fmap L.unpack (tsIntro t)
+    putStrLn (fromMaybe "No description" intro)

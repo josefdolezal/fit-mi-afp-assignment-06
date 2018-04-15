@@ -27,7 +27,19 @@ choicesLines = unlines . zipWith choiceLine [1..] . map (T.unpack . chText)
               where
                 choiceLine i c = show i ++ ":" ++ c
 
+choices :: Answer -> String
+choices c@SingleChoice{} = ("Choices:\n"++) . choicesLines . ascChoices $ c
+choices c@MultiChoice{}  = ("Choices:\n"++) . choicesLines . amcChoices $ c
+choices _                = ""
+
 questionSeparator :: String
 questionSeparator = replicate 50 '-'
+
+questionPreview :: Question -> String
+questionPreview q = unlines preview
+    where preview = (T.unpack . quText $ q) : (choices . quAnswer $ q) : []
+
+correctAnswerPreview :: Answer -> String
+correctAnswerPreview a = "Correct answer/s: " ++ (show a)
 
 -- TODO: finish with functions you need...
