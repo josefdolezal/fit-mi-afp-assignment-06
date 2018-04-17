@@ -24,6 +24,8 @@ dependencies:
 - aeson
 - bytestring
 - text
+- turtle
+- random-shuffle
 
 library:
   source-dirs: src

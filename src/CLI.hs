@@ -1,29 +1,51 @@
-module CLI (loadAndShow, testerCLI) where
+{-# LANGUAGE OverloadedStrings #-}
+
+module CLI (testerCLI) where
 
 import System.IO
 import System.Environment
+import Control.Exception
 import qualified Data.ByteString.Lazy as BS
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as L
+import Data.List
 import Data.Aeson (decode)
 import Data.Maybe
 
+import Turtle
+
 import Tester.Model
+import Tester.Answering
 import Tester.Model.AesonInstances
 
+data CLITester = CompleteTest { src :: T.Text, shuffle :: Bool }
+               | Learn        { src :: T.Text, shuffle :: Bool }
+               | Train        { src :: T.Text, shuffle :: Bool }
 
--- demonstration of using aeson to load JSON file with TestSet
-loadAndShow :: IO ()
-loadAndShow = do
-  args <- getArgs
-  handle <- openFile (head args) ReadMode
-  contentsJSON <- BS.hGetContents handle
-  let contents = decode contentsJSON :: Maybe TestSet
-  case contents of
-    Nothing -> print "Invalid JSON..."
-    _       -> print contents
+data TesterError = InvalidJSON { jsSrc :: String }
+                 deriving (Show)
 
+instance Exception TesterError
+
+shuffleQuestionsSwitch :: Parser Bool
+shuffleQuestionsSwitch = switch "shuffle" 's' "Shuffles input questions"
+
+inputFileArgument :: Parser T.Text
+inputFileArgument = argText "test" "JSON file containing test data"
+
+testerCommand :: Parser (T.Text, Bool)
+testerCommand = (,) <$> inputFileArgument
+                    <*> shuffleQuestionsSwitch
+
+cli :: Parser CLITester
+cli =   fmap (uncurry Learn) (subcommand "learn" "Prints preview of the test" testerCommand)
+    <|> fmap (uncurry Train) (subcommand "train" "Interactive testing" testerCommand)
+    <|> fmap (uncurry CompleteTest) testerCommand
 
 testerCLI :: IO ()
-testerCLI = print "Welcome to SELF-TESTER"
+testerCLI = do
+    command <- options "JSON-driven exam self-tester" cli
+    run command
   -- TODO: make CLI for answering loaded Test
   --       stack exec selftester JSON_FILE [cmd]
   --       - in args there will be one .json file with test, load the TestSet
@@ -40,3 +62,51 @@ testerCLI = print "Welcome to SELF-TESTER"
   --       If you want to try cmdargs or other, feel free to do it! (you can have nice --version and --help)
 
 -- TODO: try to deal here just with IO, dealing with "pure" Strings should be in different modules
+
+run :: CLITester -> IO ()
+run t@(CompleteTest _ _) = processInputs t >>= runCompleteTest
+run t@(Learn _ _)        = processInputs t >>= runLearn 
+run t@(Train _ _)        = processInputs t >>= runTrain
+
+runCompleteTest :: TestSet -> IO ()
+runCompleteTest t = do
+    printHeader t
+    putStrLn "Questions:\n"
+    let questions       = map questionPreview $ tsItems t
+    let taggedQuestions = zipWith (\i q -> show i ++ ") " ++ q) [1..] questions
+    let answers         = map (correctAnswerPreview . quAnswer) $ tsItems t
+    let previews        = zipWith (\q a -> q ++ a ++ "\n") taggedQuestions answers
+    putStr $ intercalate (questionSeparator ++ "\n") previews
+
+
+runLearn :: TestSet -> IO ()
+runLearn t = do
+    printHeader t
+
+runTrain :: TestSet -> IO ()
+runTrain t = do
+    printHeader t
+
+loadTestData :: String -> IO TestSet
+loadTestData src = do
+    handle  <- openFile src ReadMode
+    content <- BS.hGetContents handle
+    case (decode content) of
+        Just t  -> return t
+        Nothing -> throw (InvalidJSON src)
+
+processInputs :: CLITester -> IO TestSet
+processInputs t = permuteQuestionsIfNeeded <$> testerData
+    where testerData = loadTestData . T.unpack . src $ t
+          permuteQuestionsIfNeeded = permuteQuestions (shuffle t)
+
+permuteQuestions :: Bool -> TestSet -> TestSet
+permuteQuestions True t  = t { tsItems = shuffledItems } 
+    where shuffledItems = tsItems t
+permuteQuestions False t = t
+
+printHeader :: TestSet -> IO ()
+printHeader t = do
+    putStrLn $ "[Test Preview] " ++ (L.unpack . tsName $ t)
+    let intro = fmap L.unpack (tsIntro t)
+    putStrLn (fromMaybe "No description" intro)

@@ -17,11 +17,20 @@ data Answer = SingleChoice  { ascChoices :: [Choice] }
             | MultiChoice   { amcChoices :: [Choice] }
             | TextualAnswer { ataCorrect :: [Text], ataScore :: Points }
             | NumericAnswer { anaCorrect :: [Double], anaScore :: Points }
-            deriving (Read, Show)
+            deriving (Read)
+
+instance Show Answer where
+    show (SingleChoice sc)    = show sc
+    show (MultiChoice mc)     = show mc
+    show (TextualAnswer ta _) = show ta
+    show (NumericAnswer na _) = show na
 
 data Choice = Choice { chText    :: !Text
                      , chScore   :: Points
-                     } deriving (Read, Show)
+                     } deriving (Read)
+
+instance Show Choice where
+    show = unpack . chText
 
 data UserAnswer = ChoicesUA [Text]
                | TextualUA !Text
